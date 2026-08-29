@@ -22,10 +22,11 @@ Riverpod 2. Same idea, rebuilt on `AsyncNotifier`, no code generation, no
 
 ## Why
 
-Five preferences means five copies of the same fifteen lines: `getInstance()`
-in `build`, then compare / `AsyncData` / `getInstance()` / `setX` in the
-setter — differing only in key, default and type. This collapses them into one
-generic notifier, and call sites read exactly like any other `AsyncNotifier`.
+Hand-written, every preference is the same fifteen lines: `getInstance()` in
+`build`, then compare / `AsyncData` / `getInstance()` / `setX` in the setter —
+differing only in key, default and type. Five preferences, five copies. This
+collapses them into one generic notifier, and call sites read exactly like any
+other `AsyncNotifier`.
 
 ## Install
 
@@ -86,17 +87,18 @@ final hintShowsProvider =
     AsyncNotifierProvider<HintShows, int>(HintShows.new, name: 'hintShows');
 ```
 
-Clamping constants live with the preference the same way:
+Bounds and defaults live with the preference the same way, instead of being
+restated at every call site:
 
 ```dart
-class CustomSeconds extends PrefNotifier<int> {
-  CustomSeconds() : super('capture.custom_seconds', fallback, normalize: _clamp);
+class AutoLockMinutes extends PrefNotifier<int> {
+  AutoLockMinutes() : super('settings.auto_lock', fallback, normalize: _clamp);
 
-  static const int min = 3;
-  static const int max = 10;
+  static const int min = 1;
+  static const int max = 60;
   static const int fallback = 5;
 
-  static int _clamp(int seconds) => seconds.clamp(min, max);
+  static int _clamp(int minutes) => minutes.clamp(min, max);
 }
 ```
 
