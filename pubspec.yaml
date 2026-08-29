@@ -1,0 +1,25 @@
+name: shared_preferences_riverpod_new
+description: One-liner Riverpod 3 providers backed by SharedPreferences. A modern rewrite of shared_preferences_riverpod on AsyncNotifier.
+version: 0.1.0
+repository: https://github.com/xcc3641/shared_preferences_riverpod_new
+issue_tracker: https://github.com/xcc3641/shared_preferences_riverpod_new/issues
+topics:
+  - riverpod
+  - shared-preferences
+  - state-management
+  - persistence
+
+environment:
+  sdk: ^3.6.0
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  riverpod: ^3.0.0
+  shared_preferences: ^2.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
