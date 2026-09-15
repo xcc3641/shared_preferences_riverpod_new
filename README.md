@@ -3,15 +3,24 @@
 One line per persisted preference, on Riverpod 3.
 
 ```dart
-final darkModeProvider = prefProvider<bool>('settings.dark_mode', false);
+final darkModeProvider = syncPrefProvider<bool>('settings.dark_mode', false);
 ```
 
-That's the whole declaration. Read it, await it, write it:
+That's the whole declaration. Read it, write it:
 
 ```dart
-final isDark = ref.watch(darkModeProvider).value ?? false;  // sync-ish read
-final isDark = await ref.read(darkModeProvider.future);     // first load
-ref.read(darkModeProvider.notifier).set(true);              // write
+final isDark = ref.watch(darkModeProvider);      // T, no AsyncValue
+ref.read(darkModeProvider.notifier).set(true);   // write
+```
+
+Register the instance once, before `runApp`:
+
+```dart
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  registerSyncPrefs(await SharedPreferences.getInstance());
+  runApp(const MyApp());
+}
 ```
 
 This is a rewrite of [`shared_preferences_riverpod`][orig], which stopped at
@@ -32,8 +41,30 @@ other `AsyncNotifier`.
 
 ```yaml
 dependencies:
-  shared_preferences_riverpod_new: ^0.1.0
+  shared_preferences_riverpod_new: ^0.2.0
 ```
+
+## sync or async
+
+`syncPrefProvider` is the one you want when the app awaits
+`SharedPreferences.getInstance()` before `runApp` — the values are already in
+memory by the time any widget builds, so there is nothing to wait for.
+
+`prefProvider` is the async form, state is `AsyncValue<T>`. Reach for it only
+when a preference can genuinely become ready mid-session.
+
+Picking async when you did not need it costs correctness, not just noise.
+During `AsyncLoading` the idiomatic read
+
+```dart
+ref.watch(p).value ?? defaultValue
+```
+
+hands back the **default** — not `null`, but a perfectly plausible wrong value
+that the caller cannot tell apart from a real one. A one-shot
+`ref.read(p).value ?? defaultValue` in a callback, on a screen that never
+watches `p`, gets the default every time. `syncPrefProvider` reads once,
+synchronously, and has exactly one state, so neither failure exists.
 
 ## Supported types
 
