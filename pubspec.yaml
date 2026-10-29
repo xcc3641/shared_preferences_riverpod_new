@@ -1,6 +1,6 @@
 name: shared_preferences_riverpod_new
 description: One-liner Riverpod 3 providers backed by SharedPreferences. Sync or async, a modern rewrite of shared_preferences_riverpod.
-version: 0.2.0
+version: 0.2.1
 repository: https://github.com/xcc3641/shared_preferences_riverpod_new
 issue_tracker: https://github.com/xcc3641/shared_preferences_riverpod_new/issues
 topics:

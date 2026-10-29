@@ -46,6 +46,17 @@ void main() {
     expect(container().read(syncPrefProvider<int>('t.count', 3)), 3);
   });
 
+  test('磁盘读回来的字符串列表(List<Object?>)照样认得', () async {
+    // 平台通道载入的列表元素类型是 Object?,不是 List<String>。
+    await seed({
+      't.list': <Object?>['a', 'b'],
+    });
+    expect(
+      container().read(syncPrefProvider<List<String>>('t.list', const [])),
+      ['a', 'b'],
+    );
+  });
+
   test('set 先改 state 再落盘', () async {
     await seed({});
     final p = syncPrefProvider<bool>('t.flag', false);

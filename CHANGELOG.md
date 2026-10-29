@@ -1,3 +1,8 @@
+## 0.2.1
+
+- 修复存进去的 `List<String>` 重启后读成默认值：从磁盘载入的字符串列表是
+  `List<Object?>`，原先的类型判断恒为 false。同步版和异步版都受影响。
+
 ## 0.2.0
 
 - 新增 `syncPrefProvider<T>(key, defaultValue)`，同步版：`ref.watch(p)` 直接给 `T`，

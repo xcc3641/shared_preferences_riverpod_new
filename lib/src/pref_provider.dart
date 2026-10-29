@@ -128,6 +128,12 @@ class PrefNotifier<T> extends AsyncNotifier<T> {
   /// (e.g. an older release stored a `String` where an `int` now lives).
   static T? readPref<T>(SharedPreferences prefs, String key) {
     final raw = prefs.get(key);
+    // 从磁盘载入的字符串列表是 `List<Object?>`,`is List<String>` 恒为 false:
+    // 不单独转一次,存进去的列表重启后一律读成默认值。
+    if (raw is List && raw is! List<String> && raw.every((e) => e is String)) {
+      final list = List<String>.from(raw);
+      return list is T ? list as T : null;
+    }
     return raw is T ? raw : null;
   }
 
