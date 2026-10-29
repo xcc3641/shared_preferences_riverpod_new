@@ -3,6 +3,8 @@ import 'package:riverpod/riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_riverpod_new/shared_preferences_riverpod_new.dart';
 
+import 'restart.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -72,6 +74,38 @@ void main() {
     expect(PrefNotifier.readPref<List<String>>(prefs, 'l'), ['x', 'y']);
     expect(
       () => PrefNotifier.writePref(prefs, 'bad', const Duration(seconds: 1)),
+      throwsArgumentError,
+    );
+  });
+
+  test('all five types survive a restart', () async {
+    final b = prefProvider<bool>('t.b', false);
+    final i = prefProvider<int>('t.i', 0);
+    final d = prefProvider<double>('t.d', 0);
+    final s = prefProvider<String>('t.s', '');
+    final l = prefProvider<List<String>>('t.l', const []);
+    final before = container();
+    for (final p in [b, i, d, s, l]) {
+      await before.read(p.future);
+    }
+    await before.read(b.notifier).set(true);
+    await before.read(i.notifier).set(7);
+    await before.read(d.notifier).set(1.5);
+    await before.read(s.notifier).set('x');
+    await before.read(l.notifier).set(['x', 'y']);
+
+    await restart();
+    final after = container();
+    expect(await after.read(b.future), isTrue);
+    expect(await after.read(i.future), 7);
+    expect(await after.read(d.future), 1.5);
+    expect(await after.read(s.future), 'x');
+    expect(await after.read(l.future), ['x', 'y']);
+  });
+
+  test('an unsupported type fails where it is declared', () {
+    expect(
+      () => prefProvider<Set<String>>('t.set', const {}),
       throwsArgumentError,
     );
   });

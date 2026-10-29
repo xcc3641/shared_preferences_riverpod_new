@@ -69,7 +69,8 @@ synchronously, and has exactly one state, so neither failure exists.
 ## Supported types
 
 Whatever `SharedPreferences` can store: `bool`, `int`, `double`, `String`,
-`List<String>`. Anything else throws `ArgumentError` on write.
+`List<String>` (non-nullable). Anything else throws `ArgumentError` where the
+provider is declared, not on the first write.
 
 A value on disk whose type no longer matches (an older release stored a
 `String` where an `int` now lives) is treated as absent — you get the default

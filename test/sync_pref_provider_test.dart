@@ -3,6 +3,8 @@ import 'package:riverpod/riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_riverpod_new/shared_preferences_riverpod_new.dart';
 
+import 'restart.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -46,15 +48,35 @@ void main() {
     expect(container().read(syncPrefProvider<int>('t.count', 3)), 3);
   });
 
-  test('磁盘读回来的字符串列表(List<Object?>)照样认得', () async {
-    // 平台通道载入的列表元素类型是 Object?,不是 List<String>。
-    await seed({
-      't.list': <Object?>['a', 'b'],
-    });
+  test('五种类型都能「写进去 → 重启 → 读回来」', () async {
+    await seed({});
+    final b = syncPrefProvider<bool>('t.b', false);
+    final i = syncPrefProvider<int>('t.i', 0);
+    final d = syncPrefProvider<double>('t.d', 0);
+    final s = syncPrefProvider<String>('t.s', '');
+    final l = syncPrefProvider<List<String>>('t.l', const []);
+    final before = container();
+    await before.read(b.notifier).set(true);
+    await before.read(i.notifier).set(7);
+    await before.read(d.notifier).set(1.5);
+    await before.read(s.notifier).set('x');
+    await before.read(l.notifier).set(['x', 'y']);
+
+    registerSyncPrefs(await restart());
+    final after = container();
+    expect(after.read(b), isTrue);
+    expect(after.read(i), 7);
+    expect(after.read(d), 1.5);
+    expect(after.read(s), 'x');
+    expect(after.read(l), ['x', 'y']);
+  });
+
+  test('不支持的类型在声明时就报错', () {
     expect(
-      container().read(syncPrefProvider<List<String>>('t.list', const [])),
-      ['a', 'b'],
+      () => syncPrefProvider<Set<String>>('t.set', const {}),
+      throwsArgumentError,
     );
+    expect(() => syncPrefProvider<bool?>('t.nb', null), throwsArgumentError);
   });
 
   test('set 先改 state 再落盘', () async {

@@ -24,7 +24,8 @@ typedef PrefProvider<T> = AsyncNotifierProvider<PrefNotifier<T>, T>;
 /// ```
 ///
 /// [T] must be a type `SharedPreferences` can store: `bool`, `int`, `double`,
-/// `String` or `List<String>`. Anything else throws [ArgumentError] on write.
+/// `String` or `List<String>`. Anything else throws [ArgumentError] right here,
+/// when the provider is declared — not later on the first write.
 ///
 /// [normalize] runs on both ends — on the value read from disk and on every
 /// value written. A stale or out-of-range value on disk can't get in, and an
@@ -53,12 +54,19 @@ PrefProvider<T> prefProvider<T>(
   T defaultValue, {
   T Function(T value)? normalize,
   PrefsReader? prefs,
-}) =>
-    AsyncNotifierProvider<PrefNotifier<T>, T>(
-      () => PrefNotifier<T>(key, defaultValue,
-          normalize: normalize, prefs: prefs),
-      name: key,
-    );
+}) {
+  PrefNotifier.checkStorable<T>();
+  return AsyncNotifierProvider<PrefNotifier<T>, T>(
+    () =>
+        PrefNotifier<T>(key, defaultValue, normalize: normalize, prefs: prefs),
+    name: key,
+  );
+}
+
+/// The types `SharedPreferences` can store. [PrefNotifier.readPref] and
+/// [PrefNotifier.writePref] both dispatch on this, so whatever can be written
+/// can also be read back.
+enum _Storable { boolean, integer, decimal, string, stringList }
 
 /// The [AsyncNotifier] behind a single [SharedPreferences] key.
 ///
@@ -124,17 +132,39 @@ class PrefNotifier<T> extends AsyncNotifier<T> {
     await writePref(prefs, key, next);
   }
 
+  /// Throws [ArgumentError] unless [T] is one of the five types
+  /// `SharedPreferences` can store. The provider factories call it up front so
+  /// a bad type fails where it is declared.
+  static void checkStorable<T>() => _storableOf<T>();
+
+  static _Storable _storableOf<T>() => switch (T) {
+        const (bool) => _Storable.boolean,
+        const (int) => _Storable.integer,
+        const (double) => _Storable.decimal,
+        const (String) => _Storable.string,
+        const (List<String>) => _Storable.stringList,
+        _ => throw ArgumentError(
+            'SharedPreferences only stores bool / int / double / String / '
+            'List<String>, not $T',
+          ),
+      };
+
   /// The stored value, or `null` when [key] is empty or holds another type
   /// (e.g. an older release stored a `String` where an `int` now lives).
   static T? readPref<T>(SharedPreferences prefs, String key) {
     final raw = prefs.get(key);
-    // 从磁盘载入的字符串列表是 `List<Object?>`,`is List<String>` 恒为 false:
-    // 不单独转一次,存进去的列表重启后一律读成默认值。
-    if (raw is List && raw is! List<String> && raw.every((e) => e is String)) {
-      final list = List<String>.from(raw);
-      return list is T ? list as T : null;
-    }
-    return raw is T ? raw : null;
+    final Object? value = switch (_storableOf<T>()) {
+      _Storable.boolean => raw is bool ? raw : null,
+      _Storable.integer => raw is int ? raw : null,
+      _Storable.decimal => raw is double ? raw : null,
+      _Storable.string => raw is String ? raw : null,
+      // A list loaded from disk is a `List<Object?>`, never a `List<String>`:
+      // check the elements, not the list's static type.
+      _Storable.stringList => raw is List && raw.every((e) => e is String)
+          ? List<String>.from(raw)
+          : null,
+    };
+    return value as T?;
   }
 
   /// Stores [value] under [key], dispatching to the right `setX` call.
@@ -145,16 +175,11 @@ class PrefNotifier<T> extends AsyncNotifier<T> {
     String key,
     T value,
   ) =>
-      switch (value) {
-        bool v => prefs.setBool(key, v),
-        int v => prefs.setInt(key, v),
-        double v => prefs.setDouble(key, v),
-        String v => prefs.setString(key, v),
-        List<String> v => prefs.setStringList(key, v),
-        _ => throw ArgumentError.value(
-            value,
-            'value',
-            'SharedPreferences only stores bool / int / double / String / List<String>',
-          ),
+      switch (_storableOf<T>()) {
+        _Storable.boolean => prefs.setBool(key, value as bool),
+        _Storable.integer => prefs.setInt(key, value as int),
+        _Storable.decimal => prefs.setDouble(key, value as double),
+        _Storable.string => prefs.setString(key, value as String),
+        _Storable.stringList => prefs.setStringList(key, value as List<String>),
       };
 }

@@ -44,16 +44,18 @@ SyncPrefProvider<T> syncPrefProvider<T>(
   T defaultValue, {
   SharedPreferences Function()? prefs,
   T Function(T value)? normalize,
-}) =>
-    NotifierProvider<SyncPrefNotifier<T>, T>(
-      () => SyncPrefNotifier<T>(
-        key,
-        defaultValue,
-        prefs: prefs,
-        normalize: normalize,
-      ),
-      name: key,
-    );
+}) {
+  PrefNotifier.checkStorable<T>();
+  return NotifierProvider<SyncPrefNotifier<T>, T>(
+    () => SyncPrefNotifier<T>(
+      key,
+      defaultValue,
+      prefs: prefs,
+      normalize: normalize,
+    ),
+    name: key,
+  );
+}
 
 /// [syncPrefProvider] 背后的 notifier。需要给某个偏好加业务方法时继承它。
 class SyncPrefNotifier<T> extends Notifier<T> {
